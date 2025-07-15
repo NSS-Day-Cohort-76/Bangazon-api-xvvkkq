@@ -67,7 +67,7 @@ class Product(SafeDeleteModel):
         except ZeroDivisionError:
             avg = 0
         return avg
-
+        
     class Meta:
         verbose_name = ("product")
         verbose_name_plural = ("products")
