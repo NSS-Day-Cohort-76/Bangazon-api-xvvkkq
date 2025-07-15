@@ -268,11 +268,11 @@ class Products(ViewSet):
 
         if number_sold is not None:
             def sold_filter(product):
-                if product.number_sold <= int(number_sold):
+                if product.number_sold >= int(number_sold):
                     return True
                 return False
 
-            products = filter(sold_filter, products)
+            products = list(filter(sold_filter, products))
 
         serializer = ProductSerializer(
             products, many=True, context={'request': request})
