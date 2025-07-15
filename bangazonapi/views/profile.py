@@ -199,7 +199,6 @@ class Profile(ViewSet):
                 cart["order"] = OrderSerializer(
                     open_order, many=False, context={"request": request}
                 ).data
-                cart["order"]["line_items"] = line_items_serialized.data
                 cart["order"]["products"] = products
                 cart["order"]["total"] = total
                 cart["order"]["size"] = len(line_items_serialized.data)
