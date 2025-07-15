@@ -28,6 +28,7 @@ class OrderSerializer(serializers.HyperlinkedModelSerializer):
     """JSON serializer for customer orders"""
 
     lineitems = OrderLineItemSerializer(many=True)
+    total = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -35,7 +36,11 @@ class OrderSerializer(serializers.HyperlinkedModelSerializer):
             view_name='order',
             lookup_field='id'
         )
-        fields = ('id', 'url', 'created_date', 'payment_type', 'customer', 'lineitems')
+        fields = ('id', 'url', 'created_date', 'payment_type', 'customer', 'lineitems', 'total')
+
+    def get_total(self, obj):
+        return sum([li.product.price for li in obj.lineitems.all()])
+
 
 
 class Orders(ViewSet):
