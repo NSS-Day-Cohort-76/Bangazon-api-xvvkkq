@@ -88,7 +88,6 @@ class Profile(ViewSet):
                 recommender=current_user
             )
 
-
             serializer = ProfileSerializer(
                 current_user, many=False, context={"request": request}
             )
