@@ -4,6 +4,8 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers
 from rest_framework import status
+from rest_framework.exceptions import NotFound
+
 from bangazonapi.models import Payment, Customer
 
 
@@ -34,8 +36,8 @@ class Payments(ViewSet):
         new_payment = Payment()
         new_payment.merchant_name = request.data["merchant_name"]
         new_payment.account_number = request.data["account_number"]
-        new_payment.expiration_date = request.data["create_date"]
-        new_payment.create_date = request.data["expiration_date"]
+        new_payment.create_date = request.data["create_date"]
+        new_payment.expiration_date = request.data["expiration_date"]
         customer = Customer.objects.get(user=request.auth.user)
         new_payment.customer = customer
         new_payment.save()
@@ -56,8 +58,8 @@ class Payments(ViewSet):
             serializer = PaymentSerializer(
                 payment_type, context={'request': request})
             return Response(serializer.data)
-        except Exception as ex:
-            return HttpResponseServerError(ex)
+        except Payment.DoesNotExist:
+            raise NotFound(detail="Payment type not found.")
 
     def destroy(self, request, pk=None):
         """Handle DELETE requests for a single payment type
@@ -79,12 +81,8 @@ class Payments(ViewSet):
 
     def list(self, request):
         """Handle GET requests to payment type resource"""
-        payment_types = Payment.objects.all()
-
-        customer_id = self.request.query_params.get('customer', None)
-
-        if customer_id is not None:
-            payment_types = payment_types.filter(customer__id=customer_id)
+        customer = Customer.objects.get(user=request.auth.user)
+        payment_types = Payment.objects.filter(customer=customer)
 
         serializer = PaymentSerializer(
             payment_types, many=True, context={'request': request})

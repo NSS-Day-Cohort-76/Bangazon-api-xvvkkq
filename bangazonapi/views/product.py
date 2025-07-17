@@ -154,8 +154,10 @@ class Products(ViewSet):
             product = Product.objects.get(pk=pk)
             serializer = ProductSerializer(product, context={'request': request})
             return Response(serializer.data)
+        except Product.DoesNotExist:
+            return Response({'message': 'Product not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as ex:
-            return HttpResponseServerError(ex)
+             return Response({'message': str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def update(self, request, pk=None):
         """
@@ -268,11 +270,11 @@ class Products(ViewSet):
 
         if number_sold is not None:
             def sold_filter(product):
-                if product.number_sold <= int(number_sold):
+                if product.number_sold >= int(number_sold):
                     return True
                 return False
 
-            products = filter(sold_filter, products)
+            products = list(filter(sold_filter, products))
 
         serializer = ProductSerializer(
             products, many=True, context={'request': request})
