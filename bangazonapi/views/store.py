@@ -8,7 +8,15 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from bangazonapi.models import Store, Customer, Favorite
 from .customer import CustomerSerializer
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
+
+class UserSerializer(serializers.ModelSerializer):
+    """JSON Serializer for users"""
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'last_name', 'email', 'username']
 
 class StoreSerializer(serializers.ModelSerializer):
     """JSON serializer for stores"""
@@ -29,11 +37,10 @@ class StoreViewSet(ViewSet):
     def create(self, request):
         """Handle POST operations for stores"""
         try:
-            customer = Customer.objects.get(user=request.auth.user)
             store = Store()
             store.name = request.data["name"]
             store.description = request.data["description"]
-            store.seller = customer
+            store.seller = request.user
             store.save()
 
             serializer = StoreSerializer(store, context={"request": request})
