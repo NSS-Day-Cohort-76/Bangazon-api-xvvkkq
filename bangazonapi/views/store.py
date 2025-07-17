@@ -21,7 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
 class StoreSerializer(serializers.ModelSerializer):
     """JSON serializer for stores"""
 
-    seller = CustomerSerializer(many=False)
+    seller = UserSerializer(many=False)
 
     class Meta:
         model = Store
