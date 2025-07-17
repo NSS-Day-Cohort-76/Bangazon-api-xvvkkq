@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from bangazonapi.models import Store, Customer, Favorite
 from .customer import CustomerSerializer
+from .product import ProductSerializer
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -22,6 +23,8 @@ class StoreSerializer(serializers.ModelSerializer):
     """JSON serializer for stores"""
 
     seller = UserSerializer(many=False)
+    products = ProductSerializer(many=True, read_only=True)
+
 
     class Meta:
         model = Store
