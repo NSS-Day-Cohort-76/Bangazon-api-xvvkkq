@@ -4,6 +4,8 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers
 from rest_framework import status
+from rest_framework.exceptions import NotFound
+
 from bangazonapi.models import Payment, Customer
 
 
@@ -56,8 +58,8 @@ class Payments(ViewSet):
             serializer = PaymentSerializer(
                 payment_type, context={'request': request})
             return Response(serializer.data)
-        except Exception as ex:
-            return HttpResponseServerError(ex)
+        except Payment.DoesNotExist:
+            raise NotFound(detail="Payment type not found.")
 
     def destroy(self, request, pk=None):
         """Handle DELETE requests for a single payment type
