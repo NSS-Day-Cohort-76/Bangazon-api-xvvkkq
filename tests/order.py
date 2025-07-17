@@ -29,6 +29,16 @@ class OrderTests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+        # Create a payment type
+        url = "/payment-types"
+        data = {"merchant_name": "Chase",
+                "account_number": "1234123412341234", 
+                "expiration_date": "2026-07-01", 
+                "create_date": "2025-07-16", 
+                "customer_id": "1"}
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_add_product_to_order(self):
         """
@@ -80,5 +90,33 @@ class OrderTests(APITestCase):
         self.assertEqual(len(json_response["lineitems"]), 0)
 
     # TODO: Complete order by adding payment type
+    def test_add_payment_type(self):
+        """Ensure we can add a payment type to an order."""
+
+        # Step 1: Add product to cart (creates the order)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        response = self.client.post("/cart", { "product_id": 1 }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Step 2: Get the current open order
+        response = self.client.get("/cart", format='json')
+        json_response = json.loads(response.content)
+        order_id = json_response["id"]
+
+        # Step 3: PUT to assign payment type
+        url = f"/orders/{order_id}"
+        data = { "payment_type": 1 }
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Get cart and verify payment type was added
+        url = f"/orders/{order_id}"
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        response = self.client.get(url, None, format='json')
+        json_response = json.loads(response.content)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("/payment-types/1", json_response["payment_type"])
+
 
     # TODO: New line item is not added to closed order
