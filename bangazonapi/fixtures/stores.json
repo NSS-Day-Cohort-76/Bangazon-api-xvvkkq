@@ -1,0 +1,56 @@
+[
+    {
+        "model": "bangazonapi.store",
+        "pk": 1,
+        "fields": {
+            "name": "Steve's Electronics",
+            "description": "Your one-stop shop for all electronics needs. We specialize in computers, smartphones, and gaming accessories.",
+            "seller": 4
+        }
+    },
+    {
+        "model": "bangazonapi.store",
+        "pk": 2,
+        "fields": {
+            "name": "Joe's Sporting Goods",
+            "description": "Premium sporting equipment and athletic wear for all your fitness and outdoor adventure needs.",
+            "seller": 5
+        }
+    },
+    {
+        "model": "bangazonapi.store",
+        "pk": 3,
+        "fields": {
+            "name": "Brenda's Boutique",
+            "description": "Trendy fashion and accessories for the modern woman. Curated selection of clothing and jewelry.",
+            "seller": 6
+        }
+    },
+    {
+        "model": "bangazonapi.store",
+        "pk": 4,
+        "fields": {
+            "name": "Ryan's Tech Hub",
+            "description": "Cutting-edge technology solutions and gadgets. From smart home devices to professional equipment.",
+            "seller": 7
+        }
+    },
+    {
+        "model": "bangazonapi.store",
+        "pk": 5,
+        "fields": {
+            "name": "Emily's Artisan Market",
+            "description": "Handcrafted goods and unique artisan products. Supporting local artists and creative makers.",
+            "seller": 8
+        }
+    },
+    {
+        "model": "bangazonapi.store",
+        "pk": 6,
+        "fields": {
+            "name": "Mike's Auto Parts",
+            "description": "Quality automotive parts and accessories. Professional-grade tools and maintenance supplies.",
+            "seller": 9
+        }
+    }
+]
