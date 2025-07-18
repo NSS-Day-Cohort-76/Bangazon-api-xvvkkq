@@ -28,7 +28,7 @@ class StoreSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Store
-        fields = ("id", "name", "description", "seller")
+        fields = ("id", "name", "description", "seller", "products")
         depth = 1
 
 
