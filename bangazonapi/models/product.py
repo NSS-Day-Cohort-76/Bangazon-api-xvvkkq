@@ -26,7 +26,9 @@ class Product(SafeDeleteModel):
     location = models.CharField(max_length=50,)
     image_path = models.ImageField(
         upload_to='products', height_field=None,
-        width_field=None, max_length=None, null=True)
+        width_field=None, max_length=None, null=True, blank=True)
+    image_url = models.URLField(max_length=500, null=True, blank=True)
+    
 
     @property
     def number_sold(self):
