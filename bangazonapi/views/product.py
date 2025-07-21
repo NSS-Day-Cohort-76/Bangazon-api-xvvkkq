@@ -19,7 +19,7 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ('id', 'name', 'price', 'number_sold', 'description',
                   'quantity', 'created_date', 'location', 'image_path',
-                  'image_url', 'average_rating', 'can_be_rated', )
+                  'average_rating', 'can_be_rated', )
         depth = 1
 
 
@@ -97,24 +97,12 @@ class Products(ViewSet):
         product_category = ProductCategory.objects.get(pk=request.data["category_id"])
         new_product.category = product_category
 
-        image_data = request.data.get("image_path", None)
+        if "image_path" in request.data:
+            format, imgstr = request.data["image_path"].split(';base64,')
+            ext = format.split('/')[-1]
+            data = ContentFile(base64.b64decode(imgstr), name=f'{new_product.id}-{request.data["name"]}.{ext}')
 
-        if image_data:
-                if image_data.startswith('data:image'):  # Base64 image
-                    format, imgstr = image_data.split(';base64,')
-                    ext = format.split('/')[-1]
-                    data = ContentFile(base64.b64decode(imgstr), name=f'{new_product.id}-{request.data["name"]}.{ext}')
-                    new_product.image_path = data
-                    new_product.image_url = None
-                elif image_data.startswith('http'):
-                    new_product.image_url = image_data
-                    new_product.image_path = None
-                else:
-                    new_product.image_path = None
-                    new_product.image_url = None
-        else:
-            new_product.image_path = None
-            new_product.image_url = None
+            new_product.image_path = data
 
         new_product.save()
 
@@ -198,26 +186,6 @@ class Products(ViewSet):
 
         product_category = ProductCategory.objects.get(pk=request.data["category_id"])
         product.category = product_category
-
-        image_data = request.data.get("image_path", None)
-
-        if image_data:
-            if image_data.startswith('data:image'):
-                format, imgstr = image_data.split(';base64,')
-                ext = format.split('/')[-1]
-                data = ContentFile(base64.b64decode(imgstr), name=f'{product.id}-{request.data["name"]}.{ext}')
-                product.image_path = data
-                product.image_url = None
-            elif image_data.startswith('http'):
-                product.image_url = image_data
-                product.image_path = None
-            else:
-                product.image_path = None
-                product.image_url = None
-        else:
-            product.image_path = None
-            product.image_url = None
-
         product.save()
 
         return Response({}, status=status.HTTP_204_NO_CONTENT)
