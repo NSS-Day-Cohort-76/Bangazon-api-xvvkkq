@@ -18,6 +18,7 @@ router.register(r"cart", Cart, "cart")
 router.register(r"payment-types", Payments, "payment")
 router.register(r"profile", Profile, "profile")
 router.register(r"stores", StoreViewSet, "store")
+router.register(r"categories", ProductCategories, "categories")
 
 
 # Wire up our API using automatic URL routing.

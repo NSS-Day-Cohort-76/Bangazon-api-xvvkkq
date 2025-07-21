@@ -252,6 +252,9 @@ class Products(ViewSet):
         order = self.request.query_params.get('order_by', None)
         direction = self.request.query_params.get('direction', None)
         number_sold = self.request.query_params.get('number_sold', None)
+        location = self.request.query_params.get('location', None)
+        name = self.request.query_params.get('name', None)
+        min_price = self.request.query_params.get('min_price', None)
 
         if order is not None:
             order_filter = order
@@ -262,8 +265,21 @@ class Products(ViewSet):
 
             products = products.order_by(order_filter)
 
+        if name is not None:
+            products = products.filter(name__istartswith=name)
+        
+        if location is not None:
+            products = products.filter(location__iexact=location)
+
         if category is not None:
             products = products.filter(category__id=category)
+
+        if min_price is not None and min_price != '':
+            try:
+                products = products.filter(price__gte=float(min_price))
+            except ValueError:
+                # Handle invalid price values gracefully
+                pass
 
         if quantity is not None:
             products = products.order_by("-created_date")[:int(quantity)]
