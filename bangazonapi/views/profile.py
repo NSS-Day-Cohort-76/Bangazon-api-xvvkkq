@@ -13,6 +13,8 @@ from bangazonapi.models import OrderProduct, Favorite
 from bangazonapi.models import Recommendation
 from .product import ProductSerializer
 from .order import OrderSerializer
+from bangazonapi.models import Store
+from .store import StoreSerializer 
 
 
 class Profile(ViewSet):
@@ -83,16 +85,29 @@ class Profile(ViewSet):
             }
         """
         try:
-            current_user = Customer.objects.get(user=request.auth.user)
-            current_user.recommends = Recommendation.objects.filter(
-                recommender=current_user
-            )
+            if request.auth is None or not hasattr(request.auth, "user"):
+                return Response({"message": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            serializer = ProfileSerializer(
-                current_user, many=False, context={"request": request}
-            )
+            try:
+                current_user = Customer.objects.get(user=request.auth.user)
+            except Customer.DoesNotExist:
+                return Response({"message": "Customer profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            return Response(serializer.data)
+            current_user.recommends = Recommendation.objects.filter(recommender=current_user)
+
+            try:
+                stores = Store.objects.filter(seller=request.auth.user)
+                store_data = StoreSerializer(stores, many=True, context={"request": request}).data
+
+            except Store.DoesNotExist:
+                store_data = None
+
+            serializer = ProfileSerializer(current_user, many=False, context={"request": request})
+            profile_data = serializer.data
+            profile_data["store"] = store_data
+
+            return Response(profile_data)
+
         except Exception as ex:
             return HttpResponseServerError(ex)
 
@@ -380,7 +395,7 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = User
-        fields = ("first_name", "last_name", "email")
+        fields = ("first_name", "last_name", "email", "id")
         depth = 1
 
 
