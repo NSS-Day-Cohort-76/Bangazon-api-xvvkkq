@@ -12,6 +12,7 @@ from rest_framework import serializers
 from rest_framework import status
 from bangazonapi.models import ProductCategory
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from bangazonapi.views.product import ProductSerializer
 
 
 class ProductCategorySerializer(serializers.HyperlinkedModelSerializer):
@@ -23,6 +24,18 @@ class ProductCategorySerializer(serializers.HyperlinkedModelSerializer):
             lookup_field='id'
         )
         fields = ('id', 'url', 'name')
+
+class ProductCategoryWithRecentSerializer(serializers.ModelSerializer):
+    products = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductCategory
+        fields = ('id', 'name','products')
+
+    def get_products(self, category):
+        recent_products = category.products.order_by('-created_date')[:5]
+        request = self.context.get('request')
+        return ProductSerializer(recent_products, many=True, context={'request': request}).data
 
 
 class ProductCategories(ViewSet):
@@ -54,13 +67,19 @@ class ProductCategories(ViewSet):
 
     def list(self, request):
         """Handle GET requests to ProductCategory resource"""
-        product_category = ProductCategory.objects.all()
-
-        # Support filtering ProductCategorys by area id
-        # name = self.request.query_params.get('name', None)
-        # if name is not None:
-        #     ProductCategories = ProductCategories.filter(name=name)
-
-        serializer = ProductCategorySerializer(
-            product_category, many=True, context={'request': request})
+        include_products = request.query_params.get('include_recent_products', None)
+        
+        if include_products == 'true':
+            return self.categories_with_recent_products(request)
+        else:
+            product_category = ProductCategory.objects.all()
+            serializer = ProductCategorySerializer(
+                product_category, many=True, context={'request': request})
+            return Response(serializer.data)
+        
+    def categories_with_recent_products(self, request):
+        categories = ProductCategory.objects.all()
+        serializer = ProductCategoryWithRecentSerializer(
+            categories, many=True, context={'request': request}
+        )
         return Response(serializer.data)
