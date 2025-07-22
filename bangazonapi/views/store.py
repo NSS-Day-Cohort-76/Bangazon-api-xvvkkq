@@ -24,12 +24,28 @@ class StoreSerializer(serializers.ModelSerializer):
 
     seller = UserSerializer(many=False)
     products = ProductSerializer(many=True, read_only=True)
+    is_favorite = serializers.SerializerMethodField()
 
 
     class Meta:
         model = Store
-        fields = ("id", "name", "description", "seller", "products")
+        fields = ("id", "name", "description", "seller", "products", "is_favorite")
         depth = 1
+
+    def get_is_favorite(self, obj):
+        try:
+            request = self.context.get('request')
+            if not request or not hasattr(request, 'user') or not request.user.is_authenticated:
+                return False
+
+            customer = Customer.objects.filter(user=request.user).first()
+            if not customer or not obj.seller:
+                return False
+
+            return Favorite.objects.filter(customer=customer, seller=obj.seller).exists()
+        except Exception:
+            return False
+
 
 
 class StoreViewSet(ViewSet):
