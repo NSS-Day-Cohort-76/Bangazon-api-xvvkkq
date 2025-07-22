@@ -13,6 +13,7 @@ from bangazonapi.models import OrderProduct, Favorite
 from bangazonapi.models import Recommendation
 from .product import ProductSerializer
 from .order import OrderSerializer
+from .store import StoreSerializer
 
 
 class Profile(ViewSet):
@@ -299,62 +300,35 @@ class Profile(ViewSet):
                 {"message": "No open cart found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-    @action(methods=["get"], detail=False)
+    @action(methods=["get", "post"], detail=False)
     def favoritesellers(self, request):
-        """
-        @api {GET} /profile/favoritesellers GET favorite sellers
-        @apiName GetFavoriteSellers
-        @apiGroup UserProfile
-
-        @apiHeader {String} Authorization Auth token
-        @apiHeaderExample {String} Authorization
-            Token 9ba45f09651c5b0c404f37a2d2572c026c146611
-
-        @apiSuccess (200) {id} id Favorite id
-        @apiSuccess (200) {Object} seller Favorited seller
-        @apiSuccess (200) {String} seller.url Seller URI
-        @apiSuccess (200) {String} seller.phone_number Seller phone number
-        @apiSuccess (200) {String} seller.address Seller address
-        @apiSuccess (200) {String} seller.user Seller user profile URI
-        @apiSuccessExample {json} Success
-            [
-                {
-                    "id": 1,
-                    "seller": {
-                        "url": "http://localhost:8000/customers/5",
-                        "phone_number": "555-1212",
-                        "address": "100 Endless Way",
-                        "user": "http://localhost:8000/users/6"
-                    }
-                },
-                {
-                    "id": 2,
-                    "seller": {
-                        "url": "http://localhost:8000/customers/6",
-                        "phone_number": "555-1212",
-                        "address": "100 Dauntless Way",
-                        "user": "http://localhost:8000/users/7"
-                    }
-                },
-                {
-                    "id": 3,
-                    "seller": {
-                        "url": "http://localhost:8000/customers/7",
-                        "phone_number": "555-1212",
-                        "address": "100 Indefatiguable Way",
-                        "user": "http://localhost:8000/users/8"
-                    }
-                }
-            ]
-        """
         customer = Customer.objects.get(user=request.auth.user)
-        favorites = Favorite.objects.filter(customer=customer)
 
-        serializer = FavoriteSerializer(
-            favorites, many=True, context={"request": request}
-        )
-        return Response(serializer.data)
+        if request.method == "GET":
+             favorites = Favorite.objects.filter(customer=customer)
+             serializer = FavoriteSerializer(
+               favorites, many=True, context={"request": request}
+            )
+             return Response(serializer.data)
 
+        if request.method == "POST":
+            try:
+               store_id = request.data.get("store_id")
+               if not store_id:
+                 return Response({"message": "Missing store_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+               from bangazonapi.models import Store  # Make sure Store is imported or move this to top if preferred
+               store = Store.objects.get(pk=store_id)
+               seller_user = store.seller
+               seller = Customer.objects.get(user=seller_user)
+
+               favorite, created = Favorite.objects.get_or_create(customer=customer, seller=seller)
+
+               serializer = FavoriteSerializer(favorite, context={"request": request})
+               return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+            except Store.DoesNotExist:
+               return Response({"message": "Store not found"}, status=status.HTTP_404_NOT_FOUND)
 
 class LineItemSerializer(serializers.HyperlinkedModelSerializer):
     """JSON serializer for products
@@ -431,6 +405,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     user = UserSerializer(many=False)
     recommends = RecommenderSerializer(many=True)
+    favorite_stores = serializers.SerializerMethodField()
 
     class Meta:
         model = Customer
@@ -442,8 +417,17 @@ class ProfileSerializer(serializers.ModelSerializer):
             "address",
             "payment_types",
             "recommends",
+            "favorite_stores",
         )
         depth = 1
+
+    def get_favorite_stores(self, obj):
+        favorites = Favorite.objects.filter(customer=obj)
+        user_ids = [favorite.seller.user.id for favorite in favorites]
+
+        from bangazonapi.models import Store  # keep this local or move it up top
+        stores = Store.objects.filter(seller__in=user_ids)
+        return StoreSerializer(stores, many=True, context=self.context).data
 
 
 class FavoriteUserSerializer(serializers.HyperlinkedModelSerializer):
