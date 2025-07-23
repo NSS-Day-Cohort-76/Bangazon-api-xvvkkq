@@ -1,10 +1,3 @@
-"""
-   Author: Daniel Krusch
-   Purpose: To convert product category data to json
-   Methods: GET, POST
-"""
-
-"""View module for handling requests about product categories"""
 from django.http import HttpResponseServerError
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
@@ -58,9 +51,14 @@ class ProductCategories(ViewSet):
 
     def retrieve(self, request, pk=None):
         """Handle GET requests for single category"""
+        include_products = request.query_params.get('include_recent_products', None)
+            
         try:
             category = ProductCategory.objects.get(pk=pk)
-            serializer = ProductCategorySerializer(category, context={'request': request})
+            if include_products == 'true':
+                serializer = ProductCategoryWithRecentSerializer(category, context={'request': request})
+            else:
+                serializer = ProductCategorySerializer(category, context={'request': request})
             return Response(serializer.data)
         except Exception as ex:
             return HttpResponseServerError(ex)
