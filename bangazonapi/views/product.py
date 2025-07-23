@@ -43,8 +43,8 @@ class RecommendationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recommendation
-        fields = ("id", "customer_id", "product_id", "recommender_id", "created_at")
-        read_only_fields = ("id", "created_at")
+        fields = ("id", "customer", "product", "recommender")
+        read_only_fields = list("id")
 
 
 class CreateRecommendationSerializer(serializers.Serializer):
@@ -429,6 +429,27 @@ class Products(ViewSet):
                 recommended_products, many=True, context={"request": request}
             )
 
+            return Response(serializer.data)
+
+        except Customer.DoesNotExist:
+            return Response(
+                {"message": "Customer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as ex:
+            return Response(
+                {"message": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(methods=["get"], detail=False, url_path="recommendations-by-me")
+    def recommendations_by_me(self, request):
+        """Get recommendations made BY the current user"""
+        try:
+            current_user = Customer.objects.get(user=request.auth.user)
+            recommendations = Recommendation.objects.filter(recommender=current_user)
+
+            # Extract just the products from the recommendations
+            products = [rec.product for rec in recommendations]
+            serializer = ProductSerializer(products, many=True)
             return Response(serializer.data)
 
         except Customer.DoesNotExist:
