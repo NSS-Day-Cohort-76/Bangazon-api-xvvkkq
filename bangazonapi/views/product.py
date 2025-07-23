@@ -1,30 +1,69 @@
 """View module for handling requests about products"""
-from rest_framework.decorators import action
-from bangazonapi.models.recommendation import Recommendation
+
 import base64
 from django.core.files.base import ContentFile
 from django.http import HttpResponseServerError
-from rest_framework.viewsets import ViewSet
-from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.decorators import action
 from rest_framework import serializers
 from rest_framework import status
-from bangazonapi.models import Product, Customer, ProductCategory
+from rest_framework.response import Response
+from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from rest_framework.parsers import MultiPartParser, FormParser
+from bangazonapi.models import Product, Customer, ProductCategory
+from bangazonapi.models.recommendation import Recommendation
 
 
 class ProductSerializer(serializers.ModelSerializer):
     """JSON serializer for products"""
+
     class Meta:
         model = Product
-        fields = ('id', 'name', 'price', 'number_sold', 'description',
-                  'quantity', 'created_date', 'location', 'image_path',
-                  'average_rating', 'can_be_rated', )
+        fields = (
+            "id",
+            "name",
+            "price",
+            "number_sold",
+            "description",
+            "quantity",
+            "created_date",
+            "location",
+            "image_path",
+            "average_rating",
+            "can_be_rated",
+        )
         depth = 1
+
+
+class RecommendationSerializer(serializers.ModelSerializer):
+    """JSON serializer for recommendations"""
+
+    product = ProductSerializer(read_only=True)
+    recommender = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Recommendation
+        fields = ("id", "customer_id", "product_id", "recommender_id", "created_at")
+        read_only_fields = ("id", "created_at")
+
+
+class CreateRecommendationSerializer(serializers.Serializer):
+    """Serializer for creating recommendations"""
+
+    username = serializers.CharField(max_length=150)
+
+    def validate_username(self, value):
+        """Validate that the username exists"""
+        try:
+            user = Customer.objects.get(user__username=value)
+            return value
+        except Customer.DoesNotExist:
+            raise serializers.ValidationError("User with this username does not exist.")
 
 
 class Products(ViewSet):
     """Request handlers for Products in the Bangazon Platform"""
+
     permission_classes = (IsAuthenticatedOrReadOnly,)
 
     def create(self, request):
@@ -98,16 +137,18 @@ class Products(ViewSet):
         new_product.category = product_category
 
         if "image_path" in request.data:
-            format, imgstr = request.data["image_path"].split(';base64,')
-            ext = format.split('/')[-1]
-            data = ContentFile(base64.b64decode(imgstr), name=f'{new_product.id}-{request.data["name"]}.{ext}')
+            format, imgstr = request.data["image_path"].split(";base64,")
+            ext = format.split("/")[-1]
+            data = ContentFile(
+                base64.b64decode(imgstr),
+                name=f'{new_product.id}-{request.data["name"]}.{ext}',
+            )
 
             new_product.image_path = data
 
         new_product.save()
 
-        serializer = ProductSerializer(
-            new_product, context={'request': request})
+        serializer = ProductSerializer(new_product, context={"request": request})
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -152,12 +193,16 @@ class Products(ViewSet):
         """
         try:
             product = Product.objects.get(pk=pk)
-            serializer = ProductSerializer(product, context={'request': request})
+            serializer = ProductSerializer(product, context={"request": request})
             return Response(serializer.data)
         except Product.DoesNotExist:
-            return Response({'message': 'Product not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "Product not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as ex:
-             return Response({'message': str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"message": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def update(self, request, pk=None):
         """
@@ -211,10 +256,12 @@ class Products(ViewSet):
             return Response({}, status=status.HTTP_204_NO_CONTENT)
 
         except Product.DoesNotExist as ex:
-            return Response({'message': ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"message": ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
 
         except Exception as ex:
-            return Response({'message': ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"message": ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def list(self, request):
         """
@@ -247,34 +294,34 @@ class Products(ViewSet):
         products = Product.objects.all()
 
         # Support filtering by category and/or quantity
-        category = self.request.query_params.get('category', None)
-        quantity = self.request.query_params.get('quantity', None)
-        order = self.request.query_params.get('order_by', None)
-        direction = self.request.query_params.get('direction', None)
-        number_sold = self.request.query_params.get('number_sold', None)
-        location = self.request.query_params.get('location', None)
-        name = self.request.query_params.get('name', None)
-        min_price = self.request.query_params.get('min_price', None)
+        category = self.request.query_params.get("category", None)
+        quantity = self.request.query_params.get("quantity", None)
+        order = self.request.query_params.get("order_by", None)
+        direction = self.request.query_params.get("direction", None)
+        number_sold = self.request.query_params.get("number_sold", None)
+        location = self.request.query_params.get("location", None)
+        name = self.request.query_params.get("name", None)
+        min_price = self.request.query_params.get("min_price", None)
 
         if order is not None:
             order_filter = order
 
             if direction is not None:
                 if direction == "desc":
-                    order_filter = f'-{order}'
+                    order_filter = f"-{order}"
 
             products = products.order_by(order_filter)
 
         if name is not None:
             products = products.filter(name__istartswith=name)
-        
+
         if location is not None:
             products = products.filter(location__iexact=location)
 
         if category is not None:
             products = products.filter(category__id=category)
 
-        if min_price is not None and min_price != '':
+        if min_price is not None and min_price != "":
             try:
                 products = products.filter(price__gte=float(min_price))
             except ValueError:
@@ -282,9 +329,10 @@ class Products(ViewSet):
                 pass
 
         if quantity is not None:
-            products = products.order_by("-created_date")[:int(quantity)]
+            products = products.order_by("-created_date")[: int(quantity)]
 
         if number_sold is not None:
+
             def sold_filter(product):
                 if product.number_sold >= int(number_sold):
                     return True
@@ -293,21 +341,101 @@ class Products(ViewSet):
             products = list(filter(sold_filter, products))
 
         serializer = ProductSerializer(
-            products, many=True, context={'request': request})
+            products, many=True, context={"request": request}
+        )
         return Response(serializer.data)
 
-    @action(methods=['post'], detail=True)
+    # @action(methods=['post'], detail=True)
+    # def recommend(self, request, pk=None):
+    #     """Recommend products to other users"""
+
+    #     if request.method == "POST":
+    #         rec = Recommendation()
+    #         rec.recommender = Customer.objects.get(user=request.auth.user)
+    #         rec.customer = Customer.objects.get(user__id=request.data["recipient"])
+    #         rec.product = Product.objects.get(pk=pk)
+
+    #         rec.save()
+
+    #         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    #     return Response(None, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    @action(methods=["post"], detail=True)
     def recommend(self, request, pk=None):
-        """Recommend products to other users"""
+        """Recommend a product to another user"""
+        try:
+            # Validate the input data using the serializer
+            serializer = CreateRecommendationSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if request.method == "POST":
+            # Get the product being recommended
+            product = Product.objects.get(pk=pk)
+
+            # Get the recommender (current user)
+            recommender = Customer.objects.get(user=request.auth.user)
+
+            # Get the recipient user by username (from validated data)
+            username = serializer.validated_data["username"]
+            recipient = Customer.objects.get(user__username=username)
+
+            # Check if recommendation already exists
+            existing_rec = Recommendation.objects.filter(
+                recommender=recommender, customer=recipient, product=product
+            ).first()
+
+            if existing_rec:
+                return Response(
+                    {
+                        "message": "You have already recommended this product to this user"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Create the recommendation
             rec = Recommendation()
-            rec.recommender = Customer.objects.get(user=request.auth.user)
-            rec.customer = Customer.objects.get(user__id=request.data["recipient"])
-            rec.product = Product.objects.get(pk=pk)
-
+            rec.recommender = recommender
+            rec.customer = recipient
+            rec.product = product
             rec.save()
 
-            return Response(None, status=status.HTTP_204_NO_CONTENT)
+            # Return the created recommendation
+            response_serializer = RecommendationSerializer(rec)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
-        return Response(None, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        except Product.DoesNotExist:
+            return Response(
+                {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Customer.DoesNotExist:
+            return Response(
+                {"message": "User not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as ex:
+            return Response(
+                {"message": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(methods=["get"], detail=False)
+    def recommendations(self, request):
+        """Get recommendations for the current user"""
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            recommendations = Recommendation.objects.filter(customer=customer)
+
+            # Serialize the recommended products
+            recommended_products = [rec.product for rec in recommendations]
+            serializer = ProductSerializer(
+                recommended_products, many=True, context={"request": request}
+            )
+
+            return Response(serializer.data)
+
+        except Customer.DoesNotExist:
+            return Response(
+                {"message": "Customer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as ex:
+            return Response(
+                {"message": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
