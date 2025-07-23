@@ -96,8 +96,8 @@ class Profile(ViewSet):
             current_user.recommends = Recommendation.objects.filter(recommender=current_user)
 
             try:
-                stores = Store.objects.filter(seller=request.auth.user)
-                store_data = StoreSerializer(stores, many=True, context={"request": request}).data
+                store = Store.objects.get(seller=request.auth.user)
+                store_data = StoreSerializer(store, many=False, context={"request": request}).data
 
             except Store.DoesNotExist:
                 store_data = None
