@@ -8,3 +8,7 @@ def expensive_products(request):
         'expensive_products': expensive_products
     }
     return render(request, template, context)
+
+def inexpensive_products(request):
+    products = Product.objects.filter(price__lte=999)
+    return render(request, 'inexpensive_products.html', {'products': products})
