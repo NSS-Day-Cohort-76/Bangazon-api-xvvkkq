@@ -462,7 +462,7 @@ class Products(ViewSet):
 
             # Extract just the products from the recommendations
             products = [rec.product for rec in recommendations]
-            serializer = ProductSerializer(products, many=True)
+            serializer = ProductSerializer(products, many=True, context={"request": request})
             return Response(serializer.data)
 
         except Customer.DoesNotExist:
