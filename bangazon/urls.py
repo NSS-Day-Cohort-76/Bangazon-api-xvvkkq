@@ -31,6 +31,6 @@ urlpatterns = [
     path("api-token-auth", obtain_auth_token),
     path('reports/expensiveproducts', expensive_products, name='expensive_products'),
     path('reports/inexpensiveproducts', inexpensive_products),
-     path("reports/favoritesellers", favorite_sellers, name="favorite_sellers"),
+     path("reports/favorite_sellers", favorite_sellers, name="favorite_sellers"),
     path("api-auth", include("rest_framework.urls", namespace="rest_framework")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

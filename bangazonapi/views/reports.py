@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from bangazonapi.models import Product, Favorite, Customer
 
 def expensive_products(request):
@@ -17,7 +17,6 @@ def inexpensive_products(request):
 def favorite_sellers(request):
     customer_id = request.GET.get("customer")
 
-    # Validate query parameter
     if not customer_id:
         return render(request, "reports/error.html", {
             "message": "Customer ID is required."
@@ -30,18 +29,20 @@ def favorite_sellers(request):
             "message": "Customer ID must be an integer."
         })
 
-    customer = Customer.objects.filter(id=customer_id).first()
-    if not customer:
-        return render(request, "reports/error.html", {
-            "message": f"No customer found with ID {customer_id}."
-        })
+    customer = get_object_or_404(Customer, id=customer_id)
 
-    favorites = Favorite.objects.filter(customer=customer).select_related("seller")
-    seller_names = [fav.seller.name for fav in favorites if fav.seller is not None]
+    # Fetch favorites, optimize query with user relation
+    favorites = Favorite.objects.filter(customer=customer).select_related("seller__user")
+
+    # Get seller names from linked User model
+    seller_names = [
+        f"{fav.seller.user.first_name} {fav.seller.user.last_name}"
+        for fav in favorites if fav.seller and fav.seller.user
+    ]
 
     context = {
         "customer": customer,
         "sellers": seller_names
     }
 
-    return render(request, "reports/favorite_sellers.html", context)
+    return render(request, "favorite_sellers.html", context)

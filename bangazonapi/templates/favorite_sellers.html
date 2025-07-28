@@ -4,7 +4,7 @@
     <title>Favorited sellers by customer</title>
 </head>
 <body>
-    <h1>Customer: {{ customer.name }}</h1>
+    <h1>{{ customer.user.first_name }} {{ customer.user.last_name }}</h1>
 
 <h2>Favorited Sellers:</h2>
 {% if sellers %}
