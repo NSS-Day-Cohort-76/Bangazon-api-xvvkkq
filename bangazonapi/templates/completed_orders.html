@@ -18,11 +18,11 @@
                 </tr>
             </thead>
             <tbody>
-                {% for order in completed_orders %}
+                {% for order in orders %}
                 <tr>
                     <td>{{ order.id }}</td>
                     <td>{{ order.customer.user.first_name }} {{ order.customer.user.last_name }}</td>
-                    <td>{{ order.total_price }}</td>
+                    <td>{{ order.total_cost }}</td>
                     <td>
         {% if order.payment_type %}
             {{ order.payment_type.merchant_name }}

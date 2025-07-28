@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Incomplete Orders</title>
+    </head>
+    <body>
+        <h1>Incomplete Order Report</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Total Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.id }}</td>
+                    <td>{{ order.customer.user.first_name }} {{ order.customer.user.last_name  }}</td>
+                    <td>${{ order.total_cost|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td>No unpaid orders found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </body>
+</html>

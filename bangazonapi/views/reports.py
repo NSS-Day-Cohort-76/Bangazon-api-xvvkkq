@@ -15,25 +15,33 @@ def inexpensive_products(request):
     products = Product.objects.filter(price__lte=999)
     return render(request, 'inexpensive_products.html', {'products': products})
 
-def completed_orders(request):
-    status = request.GET.get("status")  # get query param
+def orders_report(request):
+    status = request.GET.get("status")
+
     orders = Order.objects.all()
 
-    # only filter if explicitly asked for "complete"
     if status == "complete":
         orders = orders.filter(payment_type__isnull=False)
+    elif status == "incomplete":
+        orders = orders.filter(payment_type__isnull=True)
+    else:
+        orders = []
+
+    print(f"STATUS: {status}")
+    print(f"ORDERS: {orders}")
+    print(f"Orders BEFORE annotate: {orders.count()}")    
 
     orders = orders.annotate(
-        total_price=Sum(
-             ExpressionWrapper(
-            F('lineitems__product__price'),
-            output_field=FloatField()
+        total_cost=Sum(                
+            ExpressionWrapper(
+                F("lineitems__product__price"),
+                output_field=FloatField()
+            )
         )
-        )
-    ).select_related('customer__user', 'payment_type')
+    ).select_related("customer__user")
 
-    template = 'completed_orders.html'
-    context = {
-        'completed_orders': orders
-    }
+    print(f"Orders AFTER annotate: {orders.count()}")
+
+    template = "incomplete_orders.html" if status == "incomplete" else "completed_orders.html"
+    context = {"orders": orders}
     return render(request, template, context)
