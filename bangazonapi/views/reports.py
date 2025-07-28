@@ -43,5 +43,5 @@ def orders_report(request):
     print(f"Orders AFTER annotate: {orders.count()}")
 
     template = "incomplete_orders.html" if status == "incomplete" else "completed_orders.html"
-    context = {"completed_orders": orders}
+    context = {"orders": orders}
     return render(request, template, context)

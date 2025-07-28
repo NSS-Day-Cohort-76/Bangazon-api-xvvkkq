@@ -11,8 +11,8 @@
         "model": "bangazonapi.orderproduct",
         "pk": 2,
         "fields": {
-            "order_id": 3,
-            "product_id": 50
+            "order_id": 2,
+            "product_id": 52
         }
     },
     {
@@ -20,7 +20,7 @@
         "pk": 3,
         "fields": {
             "order_id": 3,
-            "product_id": 45
+            "product_id": 50
         }
     },
     {
