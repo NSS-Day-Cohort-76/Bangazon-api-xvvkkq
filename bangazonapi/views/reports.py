@@ -1,6 +1,6 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.db.models import Sum, F, FloatField, ExpressionWrapper
-from bangazonapi.models import Product
+from bangazonapi.models import Product, Favorite, Customer
 from bangazonapi.models.order import Order
 
 def expensive_products(request):
@@ -45,3 +45,34 @@ def orders_report(request):
     template = "incomplete_orders.html" if status == "incomplete" else "completed_orders.html"
     context = {"orders": orders}
     return render(request, template, context)
+
+
+def favorite_sellers(request):
+    customer_id = request.GET.get("customer")
+
+    if not customer_id:
+        return render(request, "reports/error.html", {
+            "message": "Customer ID is required."
+        })
+
+    try:
+        customer_id = int(customer_id)
+    except ValueError:
+        return render(request, "reports/error.html", {
+            "message": "Customer ID must be an integer."
+        })
+
+    customer = get_object_or_404(Customer, id=customer_id)
+    favorites = Favorite.objects.filter(customer=customer).select_related("seller__user")
+    
+    seller_names = [
+        f"{fav.seller.user.first_name} {fav.seller.user.last_name}"
+        for fav in favorites if fav.seller and fav.seller.user
+    ]
+
+    context = {
+        "customer": customer,
+        "sellers": seller_names
+    }
+
+    return render(request, "favorite_sellers.html", context)
