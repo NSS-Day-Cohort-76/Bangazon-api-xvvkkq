@@ -30,11 +30,8 @@ def favorite_sellers(request):
         })
 
     customer = get_object_or_404(Customer, id=customer_id)
-
-    # Fetch favorites, optimize query with user relation
     favorites = Favorite.objects.filter(customer=customer).select_related("seller__user")
-
-    # Get seller names from linked User model
+    
     seller_names = [
         f"{fav.seller.user.first_name} {fav.seller.user.last_name}"
         for fav in favorites if fav.seller and fav.seller.user
