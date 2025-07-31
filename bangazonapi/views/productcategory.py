@@ -1,10 +1,3 @@
-"""
-   Author: Daniel Krusch
-   Purpose: To convert product category data to json
-   Methods: GET, POST
-"""
-
-"""View module for handling requests about product categories"""
 from django.http import HttpResponseServerError
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
@@ -12,6 +5,7 @@ from rest_framework import serializers
 from rest_framework import status
 from bangazonapi.models import ProductCategory
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from bangazonapi.views.product import ProductSerializer
 
 
 class ProductCategorySerializer(serializers.HyperlinkedModelSerializer):
@@ -23,6 +17,18 @@ class ProductCategorySerializer(serializers.HyperlinkedModelSerializer):
             lookup_field='id'
         )
         fields = ('id', 'url', 'name')
+
+class ProductCategoryWithRecentSerializer(serializers.ModelSerializer):
+    products = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductCategory
+        fields = ('id', 'name','products')
+
+    def get_products(self, category):
+        recent_products = category.products.order_by('-created_date')[:5]
+        request = self.context.get('request')
+        return ProductSerializer(recent_products, many=True, context={'request': request}).data
 
 
 class ProductCategories(ViewSet):
@@ -45,22 +51,33 @@ class ProductCategories(ViewSet):
 
     def retrieve(self, request, pk=None):
         """Handle GET requests for single category"""
+        include_products = request.query_params.get('include_recent_products', None)
+            
         try:
             category = ProductCategory.objects.get(pk=pk)
-            serializer = ProductCategorySerializer(category, context={'request': request})
+            if include_products == 'true':
+                serializer = ProductCategoryWithRecentSerializer(category, context={'request': request})
+            else:
+                serializer = ProductCategorySerializer(category, context={'request': request})
             return Response(serializer.data)
         except Exception as ex:
             return HttpResponseServerError(ex)
 
     def list(self, request):
         """Handle GET requests to ProductCategory resource"""
-        product_category = ProductCategory.objects.all()
-
-        # Support filtering ProductCategorys by area id
-        # name = self.request.query_params.get('name', None)
-        # if name is not None:
-        #     ProductCategories = ProductCategories.filter(name=name)
-
-        serializer = ProductCategorySerializer(
-            product_category, many=True, context={'request': request})
+        include_products = request.query_params.get('include_recent_products', None)
+        
+        if include_products == 'true':
+            return self.categories_with_recent_products(request)
+        else:
+            product_category = ProductCategory.objects.all()
+            serializer = ProductCategorySerializer(
+                product_category, many=True, context={'request': request})
+            return Response(serializer.data)
+        
+    def categories_with_recent_products(self, request):
+        categories = ProductCategory.objects.all()
+        serializer = ProductCategoryWithRecentSerializer(
+            categories, many=True, context={'request': request}
+        )
         return Response(serializer.data)

@@ -8,17 +8,44 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from bangazonapi.models import Store, Customer, Favorite
 from .customer import CustomerSerializer
+from .product import ProductSerializer
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
+
+class UserSerializer(serializers.ModelSerializer):
+    """JSON Serializer for users"""
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'last_name', 'email', 'username']
 
 class StoreSerializer(serializers.ModelSerializer):
     """JSON serializer for stores"""
 
-    seller = CustomerSerializer(many=False)
+    seller = UserSerializer(many=False)
+    products = ProductSerializer(many=True, read_only=True)
+    is_favorite = serializers.SerializerMethodField()
+
 
     class Meta:
         model = Store
-        fields = ("id", "name", "description", "seller")
+        fields = ("id", "name", "description", "seller", "products", "is_favorite")
         depth = 1
+
+    def get_is_favorite(self, obj):
+        try:
+            request = self.context.get('request')
+            if not request or not hasattr(request, 'user') or not request.user.is_authenticated:
+                return False
+
+            customer = Customer.objects.filter(user=request.user).first()
+            if not customer or not obj.seller:
+                return False
+
+            return Favorite.objects.filter(customer=customer, seller=obj.seller).exists()
+        except Exception:
+            return False
+
 
 
 class StoreViewSet(ViewSet):
@@ -29,11 +56,10 @@ class StoreViewSet(ViewSet):
     def create(self, request):
         """Handle POST operations for stores"""
         try:
-            customer = Customer.objects.get(user=request.auth.user)
             store = Store()
             store.name = request.data["name"]
             store.description = request.data["description"]
-            store.seller = customer
+            store.seller = request.user
             store.save()
 
             serializer = StoreSerializer(store, context={"request": request})

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Inexpensive Products</title>
+    </head>
+    <body>
+        <h1>Products Prices at $999 or Less</h1>
+        <ul>
+            {% for product in products %}
+                <li>{{ product.name}} - {{ product.price }}</li>
+            {% empty %}
+                <li>No Inexpensive Products Found.</li>
+            {% endfor %}
+        </ul>
+    </body>
+</html>

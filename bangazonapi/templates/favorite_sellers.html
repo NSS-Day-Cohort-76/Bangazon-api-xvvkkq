@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Favorited sellers by customer</title>
+</head>
+<body>
+    <h1>{{ customer.user.first_name }} {{ customer.user.last_name }}</h1>
+
+<h2>Favorited Sellers:</h2>
+{% if sellers %}
+<ul>
+    {% for seller in sellers %}
+    <li>{{ seller }}</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p><em>This customer has not favorited any sellers.</em></p>
+{% endif %}
+</body>
+</html>

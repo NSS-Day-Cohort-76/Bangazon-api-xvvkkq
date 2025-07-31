@@ -3,37 +3,13 @@
         "model": "bangazonapi.orderproduct",
         "pk": 1,
         "fields": {
-            "order_id": 9,
-            "product_id": 1
+            "order_id": 1,
+            "product_id": 10
         }
     },
     {
         "model": "bangazonapi.orderproduct",
         "pk": 2,
-        "fields": {
-            "order_id": 10,
-            "product_id": 3
-        }
-    },
-    {
-        "model": "bangazonapi.orderproduct",
-        "pk": 3,
-        "fields": {
-            "order_id": 8,
-            "product_id": 21
-        }
-    },
-    {
-        "model": "bangazonapi.orderproduct",
-        "pk": 7,
-        "fields": {
-            "order_id": 8,
-            "product_id": 5
-        }
-    },
-    {
-        "model": "bangazonapi.orderproduct",
-        "pk": 4,
         "fields": {
             "order_id": 2,
             "product_id": 52
@@ -41,42 +17,66 @@
     },
     {
         "model": "bangazonapi.orderproduct",
+        "pk": 3,
+        "fields": {
+            "order_id": 3,
+            "product_id": 50
+        }
+    },
+    {
+        "model": "bangazonapi.orderproduct",
+        "pk": 4,
+        "fields": {
+            "order_id": 4,
+            "product_id": 12
+        }
+    },
+    {
+        "model": "bangazonapi.orderproduct",
         "pk": 5,
         "fields": {
-            "order_id": 2,
-            "product_id": 33
+            "order_id": 5,
+            "product_id": 8
         }
     },
     {
         "model": "bangazonapi.orderproduct",
         "pk": 6,
         "fields": {
-            "order_id": 2,
-            "product_id": 71
+            "order_id": 6,
+            "product_id": 15
         }
     },
     {
         "model": "bangazonapi.orderproduct",
         "pk": 7,
         "fields": {
-            "order_id": 3,
-            "product_id": 50
+            "order_id": 7,
+            "product_id": 20
         }
     },
     {
         "model": "bangazonapi.orderproduct",
         "pk": 8,
         "fields": {
-            "order_id": 3,
-            "product_id": 50
+            "order_id": 8,
+            "product_id": 21
         }
     },
     {
         "model": "bangazonapi.orderproduct",
         "pk": 9,
         "fields": {
-            "order_id": 3,
-            "product_id": 45
+            "order_id": 9,
+            "product_id": 1
+        }
+    },
+    {
+        "model": "bangazonapi.orderproduct",
+        "pk": 10,
+        "fields": {
+            "order_id": 10,
+            "product_id": 3
         }
     }
 ]
