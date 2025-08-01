@@ -10,16 +10,25 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from bangazonapi.models import Product, Customer, ProductCategory
+from bangazonapi.models import Product, Customer, ProductCategory, ProductRating
 from bangazonapi.models.recommendation import Recommendation
 from bangazonapi.models.like import Like
 
+
+class ProductRatingSerializer(serializers.ModelSerializer):
+    """JSON serializer for product ratings"""
+
+    class Meta:
+        model = ProductRating
+        fields = ("id", "rating", "review", "customer")
+        depth = 1
 
 
 class ProductSerializer(serializers.ModelSerializer):
     """JSON serializer for products"""
 
     is_liked = serializers.SerializerMethodField()
+    ratings = ProductRatingSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
@@ -36,17 +45,19 @@ class ProductSerializer(serializers.ModelSerializer):
             "average_rating",
             "can_be_rated",
             "is_liked",
+            "ratings",
         )
         depth = 1
-        
+
     def get_is_liked(self, obj):
         """Check if the current user has liked this product"""
-        request = self.context.get('request', None)
+        request = self.context.get("request", None)
         if request and request.user.is_authenticated:
             customer = Customer.objects.filter(user=request.user).first()
             if customer:
                 return Like.objects.filter(customer=customer, product=obj).exists()
         return False
+
 
 class RecommendationSerializer(serializers.ModelSerializer):
     """JSON serializer for recommendations"""
@@ -145,6 +156,18 @@ class Products(ViewSet):
 
         customer = Customer.objects.get(user=request.auth.user)
         new_product.customer = customer
+
+        # Get or create a store for the user
+        from bangazonapi.models import Store
+
+        store, created = Store.objects.get_or_create(
+            seller=request.auth.user,
+            defaults={
+                "name": f"{request.auth.user.first_name}'s Store",
+                "description": f"Store owned by {request.auth.user.first_name} {request.auth.user.last_name}",
+            },
+        )
+        new_product.store = store
 
         product_category = ProductCategory.objects.get(pk=request.data["category_id"])
         new_product.category = product_category
@@ -462,7 +485,9 @@ class Products(ViewSet):
 
             # Extract just the products from the recommendations
             products = [rec.product for rec in recommendations]
-            serializer = ProductSerializer(products, many=True, context={"request": request})
+            serializer = ProductSerializer(
+                products, many=True, context={"request": request}
+            )
             return Response(serializer.data)
 
         except Customer.DoesNotExist:
@@ -473,9 +498,8 @@ class Products(ViewSet):
             return Response(
                 {"message": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
-        from bangazonapi.models.like import Like  # <- import the new model
 
+        from bangazonapi.models.like import Like  # <- import the new model
 
     @action(methods=["post", "delete"], detail=True, url_path="like")
     def like_unlike_product(self, request, pk=None):
@@ -484,30 +508,47 @@ class Products(ViewSet):
         try:
             product = Product.objects.get(pk=pk)
         except Product.DoesNotExist:
-            return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         if request.method == "POST":
             # Add like if not already liked
-            like, created = Like.objects.get_or_create(customer=customer, product=product)
-            return Response({"message": "Product liked"} if created else {"message": "Already liked"}, status=status.HTTP_201_CREATED)
+            like, created = Like.objects.get_or_create(
+                customer=customer, product=product
+            )
+            return Response(
+                (
+                    {"message": "Product liked"}
+                    if created
+                    else {"message": "Already liked"}
+                ),
+                status=status.HTTP_201_CREATED,
+            )
 
         elif request.method == "DELETE":
             # Remove like if it exists
             try:
                 like = Like.objects.get(customer=customer, product=product)
                 like.delete()
-                return Response({"message": "Product unliked"}, status=status.HTTP_204_NO_CONTENT)
+                return Response(
+                    {"message": "Product unliked"}, status=status.HTTP_204_NO_CONTENT
+                )
             except Like.DoesNotExist:
-                return Response({"message": "Like not found"}, status=status.HTTP_404_NOT_FOUND)
+                return Response(
+                    {"message": "Like not found"}, status=status.HTTP_404_NOT_FOUND
+                )
 
     @action(methods=["get"], detail=False, url_path="liked")
     def liked_products(self, request):
         """List all products liked by current user"""
         customer = Customer.objects.get(user=request.auth.user)
         liked_products = Product.objects.filter(like__customer=customer)
-        serializer = ProductSerializer(liked_products, many=True, context={"request": request})
+        serializer = ProductSerializer(
+            liked_products, many=True, context={"request": request}
+        )
         return Response(serializer.data)
-    
+
     @action(methods=["get"], detail=False, url_path="liked")
     def liked(self, request):
         """Get all products liked by the current authenticated user"""
@@ -515,9 +556,53 @@ class Products(ViewSet):
         liked_products = Product.objects.filter(like__customer=customer)
 
         serializer = ProductSerializer(
-            liked_products, many=True, context={'request': request}
+            liked_products, many=True, context={"request": request}
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=["post"], url_path="rate-product")
+    def rate_product(self, request, pk=None):
+        """Handle POST requests to rate a product"""
+        try:
+            product = Product.objects.get(pk=pk)
+            customer = Customer.objects.get(user=request.auth.user)
 
+            # Check if user already rated this product
+            existing_rating = ProductRating.objects.filter(
+                product=product, customer=customer
+            ).first()
 
+            # Accept both 'rating' and 'score' field names for compatibility
+            rating_value = request.data.get("rating") or request.data.get("score")
+            review_text = request.data.get("review", "")
+
+            if rating_value is None:
+                return Response(
+                    {"message": "Rating value is required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if existing_rating:
+                # Update existing rating
+                existing_rating.rating = rating_value
+                existing_rating.review = review_text
+                existing_rating.save()
+            else:
+                # Create new rating
+                ProductRating.objects.create(
+                    product=product,
+                    customer=customer,
+                    rating=rating_value,
+                    review=review_text,
+                )
+
+            return Response({}, status=status.HTTP_201_CREATED)
+
+        except Product.DoesNotExist:
+            return Response(
+                {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as ex:
+            return Response(
+                {"message": str(ex)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
