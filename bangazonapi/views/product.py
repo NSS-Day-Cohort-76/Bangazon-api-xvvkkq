@@ -10,7 +10,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from bangazonapi.models import Product, Customer, ProductCategory
+from bangazonapi.models import Product, Customer, ProductCategory, Store
 from bangazonapi.models.recommendation import Recommendation
 from bangazonapi.models.like import Like
 
@@ -32,6 +32,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "quantity",
             "created_date",
             "location",
+            "image_url",
             "image_path",
             "average_rating",
             "can_be_rated",
@@ -149,15 +150,21 @@ class Products(ViewSet):
         product_category = ProductCategory.objects.get(pk=request.data["category_id"])
         new_product.category = product_category
 
-        if "image_path" in request.data:
-            format, imgstr = request.data["image_path"].split(";base64,")
-            ext = format.split("/")[-1]
-            data = ContentFile(
-                base64.b64decode(imgstr),
-                name=f'{new_product.id}-{request.data["name"]}.{ext}',
-            )
+        store = Store.objects.get(seller=request.auth.user)
+        new_product.store = store
 
-            new_product.image_path = data
+        # if "image_path" in request.data:
+        #     format, imgstr = request.data["image_path"].split(";base64,")
+        #     ext = format.split("/")[-1]
+        #     data = ContentFile(
+        #         base64.b64decode(imgstr),
+        #         name=f'{new_product.id}-{request.data["name"]}.{ext}',
+        #     )
+
+        #     new_product.image_path = data
+
+        if "image_url" in request.data:
+            new_product.image_url = request.data["image_url"]
 
         new_product.save()
 
